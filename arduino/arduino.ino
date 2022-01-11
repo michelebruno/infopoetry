@@ -2,23 +2,49 @@
 
 #include <SPI.h>
 
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SH110X.h>
 #include <WiFiNINA.h>
 
 #include "credentials.h"
- 
+
 int status = WL_IDLE_STATUS;     // the WiFi radio's status
 
 WiFiClient wifi;
 
 WebSocketClient client = WebSocketClient(wifi, "https://michelebruno.herokuapp.com", 80);
 
+Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
+
+#include "drawqrcode.h"
 
 void setup() {
-  //Initialize serial and wait for port to open:
+
   Serial.begin(9600);
+
+    //Initialize serial and wait for port to open:
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
+
+  Serial.println("128x64 OLED FeatherWing test");
+
+  display.begin(0x3C, true); // Address 0x3C default
+
+  Serial.println("OLED begun");
+
+  // Show image buffer on the display hardware.
+  // Since the buffer is intialized with an Adafruit splashscreen
+  // internally, this will display the splashscreen.
+  // display.display();
+  display.clearDisplay();
+
+
+
+  const char *lines[4] = { "Scan to", "Join", "Lumifera", "WiFi" };
+
+  drawQrCode("https://michelebruno.herokuapp.com", lines);
 
 
     // NOTE: SOME PRINTERS NEED 9600 BAUD instead of 19200, check test page.
