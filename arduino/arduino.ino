@@ -6,18 +6,23 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <WiFiNINA.h>
+#include <ArduinoHttpClient.h>
 
 #include "credentials.h"
 
 int status = WL_IDLE_STATUS;     // the WiFi radio's status
+int count= 0;
 
 WiFiClient wifi;
 
-WebSocketClient client = WebSocketClient(wifi, "https://michelebruno.herokuapp.com", 80);
+WebSocketClient client = WebSocketClient(wifi, "michelebruno.herokuapp.com/infopoetry", 80);
 
 Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
 
 #include "drawqrcode.h"
+#include "wifidebug.h"
+
+// https://github.com/arduino-libraries/ArduinoHttpClient/issues/95
 
 void setup() {
 
@@ -55,7 +60,8 @@ void setup() {
     ; // wait for serial port to connect. Needed for native USB port only
   }
 
-  Serial1.println("Funziono!");
+  delay(5000);
+  Serial1.write("Funziono!");
 
   Serial.println("Ho stampato");
 
@@ -81,80 +87,62 @@ void setup() {
     status = WiFi.begin(ssid, pass);
 
     // wait 10 seconds for connection:
-    delay(10000);
+    // delay(10000);
+
+    if (status != WL_CONNECTED) {
+        
+      Serial.print("Attempting to connect to WPA SSID: ");
+      Serial.print("eduroam ");
+      Serial.println(pass);
+  
+      // Connect to WPA/WPA2 network:
+      status = WiFi.beginEnterprise("eduroam",  "10696137@polimi.it", "QTv9RraTz8JKkr");
+  
+      // wait 10 seconds for connection:
+      delay(10000);
+
+   
+    }
+
+    
   }
 
   // you're connected now, so print out the data:
   Serial.print("You're connected to the network");
-  // printCurrentNet();
-  // printWifiData();
+  printCurrentNet();
+  printWifiData();
 
 
 }
 
 void loop() {
-  // check the network connection once every 10 seconds:
-  delay(10000);
+  Serial.println("starting WebSocket client");
+  client.begin();
 
-  // printCurrentNet();
+  while (client.connected()) {
+    Serial.print("Sending hello ");
+    Serial.println(count);
 
-    /*
-      // check if a message is available to be received
-      int messageSize = client.parseMessage();
+    // send a hello #
+    client.beginMessage(TYPE_TEXT);
+    client.print("hello ");
+    client.print(count);
+    client.endMessage();
 
-      if (messageSize > 0) {
-        Serial.println("Received a message:");
-        Serial.println(client.readString());
-      }*/
+    // increment count for next message
+    count++;
 
-}
+    // check if a message is available to be received
+    int messageSize = client.parseMessage();
 
-void printWifiData() {
-  // print your board's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-  Serial.println(ip);
-
-  // print your MAC address:
-  byte mac[6];
-  WiFi.macAddress(mac);
-  Serial.print("MAC address: ");
-  printMacAddress(mac);
-}
-
-void printCurrentNet() {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print the MAC address of the router you're attached to:
-  byte bssid[6];
-  WiFi.BSSID(bssid);
-  Serial.print("BSSID: ");
-  printMacAddress(bssid);
-
-  // print the received signal strength:
-  long rssi = WiFi.RSSI();
-  Serial.print("signal strength (RSSI):");
-  Serial.println(rssi);
-
-  // print the encryption type:
-  byte encryption = WiFi.encryptionType();
-  Serial.print("Encryption Type:");
-  Serial.println(encryption, HEX);
-  Serial.println();
-}
-
-void printMacAddress(byte mac[]) {
-  for (int i = 5; i >= 0; i--) {
-    if (mac[i] < 16) {
-      Serial.print("0");
+    if (messageSize > 0) {
+      Serial.println("Received a message:");
+      Serial.println(client.readString());
     }
-    Serial.print(mac[i], HEX);
-    if (i > 0) {
-      Serial.print(":");
-    }
+
+    // wait 5 seconds
+    delay(5000);
   }
-  Serial.println();
+
+  Serial.println("disconnected");
 }
